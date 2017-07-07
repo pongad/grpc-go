@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package grpc.testing;
 
+option go_package = "google.golang.org/grpc/benchmark/grpc_testing";
+
 // The type of payload that should be returned.
 enum PayloadType {
   // Compressable text format.

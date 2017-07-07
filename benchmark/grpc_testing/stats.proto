@@ -16,6 +16,8 @@ syntax = "proto3";
 
 package grpc.testing;
 
+option go_package = "google.golang.org/grpc/benchmark/grpc_testing";
+
 message ServerStats {
   // wall clock time change in seconds since last reset
   double time_elapsed = 1;

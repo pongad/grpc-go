@@ -29,13 +29,40 @@ import (
 	"testing"
 	"time"
 
+	gax "github.com/googleapis/gax-go"
 	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
+	gapic "google.golang.org/grpc/benchmark/gapic_testing"
 	testpb "google.golang.org/grpc/benchmark/grpc_testing"
 	"google.golang.org/grpc/benchmark/latency"
 	"google.golang.org/grpc/benchmark/stats"
 	"google.golang.org/grpc/grpclog"
 )
+
+func NewBenchmarkClient(conn *grpc.ClientConn) testpb.BenchmarkServiceClient {
+	// return testpb.NewBenchmarkServiceClient(conn)
+
+	c, err := gapic.NewClient(context.TODO(), option.WithGRPCConn(conn))
+	if err != nil {
+		grpclog.Fatal(err)
+	}
+	return &gapicAdaptor{
+		c: c,
+	}
+}
+
+type gapicAdaptor struct {
+	c *gapic.Client
+}
+
+func (c *gapicAdaptor) UnaryCall(ctx context.Context, in *testpb.SimpleRequest, opts ...grpc.CallOption) (*testpb.SimpleResponse, error) {
+	return c.c.UnaryCall(ctx, in, gax.WithGRPCOptions(opts...))
+}
+
+func (c *gapicAdaptor) StreamingCall(ctx context.Context, opts ...grpc.CallOption) (testpb.BenchmarkService_StreamingCallClient, error) {
+	return c.c.StreamingCall(ctx, gax.WithGRPCOptions(opts...))
+}
 
 // Allows reuse of the same testpb.Payload object.
 func setPayload(p *testpb.Payload, t testpb.PayloadType, size int) {
@@ -242,7 +269,7 @@ func runUnary(b *testing.B, maxConcurrentCalls, reqSize, respSize, kbps, mtu int
 			return nw.TimeoutDialer(net.DialTimeout)("tcp", address, timeout)
 		}),
 	)
-	tc := testpb.NewBenchmarkServiceClient(conn)
+	tc := NewBenchmarkClient(conn)
 
 	// Warm up connection.
 	for i := 0; i < 10; i++ {
@@ -291,7 +318,7 @@ func runStream(b *testing.B, maxConcurrentCalls, reqSize, respSize, kbps, mtu in
 			return nw.TimeoutDialer(net.DialTimeout)("tcp", address, timeout)
 		}),
 	)
-	tc := testpb.NewBenchmarkServiceClient(conn)
+	tc := NewBenchmarkClient(conn)
 
 	// Warm up connection.
 	stream, err := tc.StreamingCall(context.Background())

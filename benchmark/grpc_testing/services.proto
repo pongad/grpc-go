@@ -21,6 +21,9 @@ import "control.proto";
 
 package grpc.testing;
 
+option go_package = "google.golang.org/grpc/benchmark/grpc_testing";
+
+// The benchmark service.
 service BenchmarkService {
   // One request followed by one response.
   // The server returns the client payload as-is.
