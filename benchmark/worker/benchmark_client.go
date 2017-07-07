@@ -243,7 +243,7 @@ func startBenchmarkClient(config *testpb.ClientConfig) (*benchmarkClient, error)
 
 func (bc *benchmarkClient) doCloseLoopUnary(conns []*grpc.ClientConn, rpcCountPerConn int, reqSize int, respSize int) {
 	for ic, conn := range conns {
-		client := testpb.NewBenchmarkServiceClient(conn)
+		client := benchmark.NewBenchmarkClient(conn)
 		// For each connection, create rpcCountPerConn goroutines to do rpc.
 		for j := 0; j < rpcCountPerConn; j++ {
 			// Create histogram for each goroutine.
@@ -294,7 +294,7 @@ func (bc *benchmarkClient) doCloseLoopStreaming(conns []*grpc.ClientConn, rpcCou
 	for ic, conn := range conns {
 		// For each connection, create rpcCountPerConn goroutines to do rpc.
 		for j := 0; j < rpcCountPerConn; j++ {
-			c := testpb.NewBenchmarkServiceClient(conn)
+			c := benchmark.NewBenchmarkClient(conn)
 			stream, err := c.StreamingCall(context.Background())
 			if err != nil {
 				grpclog.Fatalf("%v.StreamingCall(_) = _, %v", c, err)

@@ -19,6 +19,8 @@ import "stats.proto";
 
 package grpc.testing;
 
+option go_package = "google.golang.org/grpc/benchmark/grpc_testing";
+
 enum ClientType {
   SYNC_CLIENT = 0;
   ASYNC_CLIENT = 1;

@@ -23,11 +23,15 @@ import (
 	"net"
 	"strconv"
 
+	gax "github.com/googleapis/gax-go"
+	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/interop"
+	gapic "google.golang.org/grpc/interop/gapic_testing"
 	testpb "google.golang.org/grpc/interop/grpc_testing"
 )
 
@@ -61,9 +65,39 @@ var (
         unimplemented_method: client attempts to call unimplemented method;
         unimplemented_service: client attempts to call unimplemented service.`)
 
+	client = flag.String("client", "", "grpc or gapic")
+
 	// The test CA root cert file
 	testCAFile = "testdata/ca.pem"
 )
+
+type gapicAdaptor struct {
+	c *gapic.TestClient
+}
+
+func (c *gapicAdaptor) EmptyCall(ctx context.Context, in *testpb.Empty, opts ...grpc.CallOption) (*testpb.Empty, error) {
+	return c.c.EmptyCall(ctx, in, gax.WithGRPCOptions(opts...))
+}
+
+func (c *gapicAdaptor) UnaryCall(ctx context.Context, in *testpb.SimpleRequest, opts ...grpc.CallOption) (*testpb.SimpleResponse, error) {
+	return c.c.UnaryCall(ctx, in, gax.WithGRPCOptions(opts...))
+}
+
+func (c *gapicAdaptor) StreamingOutputCall(ctx context.Context, in *testpb.StreamingOutputCallRequest, opts ...grpc.CallOption) (testpb.TestService_StreamingOutputCallClient, error) {
+	return c.c.StreamingOutputCall(ctx, in, gax.WithGRPCOptions(opts...))
+}
+
+func (c *gapicAdaptor) StreamingInputCall(ctx context.Context, opts ...grpc.CallOption) (testpb.TestService_StreamingInputCallClient, error) {
+	return c.c.StreamingInputCall(ctx, gax.WithGRPCOptions(opts...))
+}
+
+func (c *gapicAdaptor) FullDuplexCall(ctx context.Context, opts ...grpc.CallOption) (testpb.TestService_FullDuplexCallClient, error) {
+	return c.c.FullDuplexCall(ctx, gax.WithGRPCOptions(opts...))
+}
+
+func (c *gapicAdaptor) HalfDuplexCall(ctx context.Context, opts ...grpc.CallOption) (testpb.TestService_HalfDuplexCallClient, error) {
+	return c.c.HalfDuplexCall(ctx, gax.WithGRPCOptions(opts...))
+}
 
 func main() {
 	flag.Parse()
@@ -110,7 +144,23 @@ func main() {
 		grpclog.Fatalf("Fail to dial: %v", err)
 	}
 	defer conn.Close()
-	tc := testpb.NewTestServiceClient(conn)
+
+	var tc testpb.TestServiceClient
+	switch *client {
+	case "grpc":
+		tc = testpb.NewTestServiceClient(conn)
+	case "gapic":
+		c, err := gapic.NewTestClient(context.TODO(), option.WithGRPCConn(conn))
+		if err != nil {
+			grpclog.Fatal(err)
+		}
+		tc = &gapicAdaptor{
+			c: c,
+		}
+	default:
+		grpclog.Fatal("Unsupported client: ", *client)
+	}
+
 	switch *testCase {
 	case "empty_unary":
 		interop.DoEmptyUnaryCall(tc)
